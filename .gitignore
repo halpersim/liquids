@@ -1,0 +1,6 @@
+debug/
+x64/
+packages/
+D3D12/
+.vs/
+packages.config

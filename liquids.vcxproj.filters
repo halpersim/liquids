@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Utility\DXSample.cpp">
+      <Filter>Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Utility\Win32Applicaiton.cpp">
+      <Filter>Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation1\Simulation1.cpp">
+      <Filter>Sample</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Utility\d3dx12.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Utility\DXSample.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Utility\DXSampleHelper.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Utility\stdafx.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Utility\Win32Application.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation1\Simulation1.h">
+      <Filter>Sample</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{fe010d2f-0bea-4cda-b22a-5b3503bd0176}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample">
+      <UniqueIdentifier>{33cffcf4-d9ef-43c9-aa88-47a97983288e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation1">
+      <UniqueIdentifier>{6890ed28-508d-433d-8bb1-351ab2025480}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation1\shader">
+      <UniqueIdentifier>{2182f172-28a4-43b9-8308-fcae2dfb20b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation1\shader\compute">
+      <UniqueIdentifier>{b02457d3-ade2-41e2-8d3d-0059ec050c30}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation1\shader\graphics">
+      <UniqueIdentifier>{163db639-eff5-460f-a0b1-4f3c07aed47a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation1\shader\graphics\shading">
+      <UniqueIdentifier>{891ce8fa-01a0-46b9-8a41-e31e0d318d6b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation1\shader\graphics\visibility">
+      <UniqueIdentifier>{88d93419-a05f-4b49-9ccd-489c09032aec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation1\shader\graphics\blending">
+      <UniqueIdentifier>{072fdc47-3454-4383-8ca6-fac322a49288}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utility">
+      <UniqueIdentifier>{fa0d4bf9-86ec-4cc7-b94c-dbee0288a6b6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="src\Simulation1\shader\graphics\shading\deferred_shading.hlsl">
+      <Filter>Sample\Simulation1\shader\graphics\shading</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Simulation1\shader\graphics\visibility\liquid.hlsl">
+      <Filter>Sample\Simulation1\shader\graphics\visibility</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Simulation1\shader\graphics\visibility\ground.hlsl">
+      <Filter>Sample\Simulation1\shader\graphics\visibility</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Simulation1\shader\graphics\blending\liquid.hlsl">
+      <Filter>Sample\Simulation1\shader\graphics\blending</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Simulation1\shader\graphics\blending\ground.hlsl">
+      <Filter>Sample\Simulation1\shader\graphics\blending</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Simulation1\shader\compute\compute_shader.hlsl">
+      <Filter>Sample\Simulation1\shader\compute</Filter>
+    </FxCompile>
+  </ItemGroup>
+</Project>
