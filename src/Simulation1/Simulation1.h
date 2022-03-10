@@ -38,6 +38,7 @@ private:
   static const UINT SimulationStartValue = 1000;
 
   static const float TimeStep;
+  static const XMVECTOR eye;
 
   //--------Simulation Technical Constants-------------------
   static const UINT ComputeRuns = 2;

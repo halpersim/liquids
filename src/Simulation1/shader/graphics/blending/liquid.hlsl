@@ -118,8 +118,9 @@ PSOutput PSMain(GSOutput input) {
   result.color = float4(weight * color, weight);
 
   //for debugging 
-  //float t = smoothstep(2000, 2500, input.cnt);
-  //result.color = float4(lerp3(float3(1.f, 0.2f, 0.1f), float3(0.f, 0.f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
+  float t = smoothstep(2000, 2450, input.cnt);
+  result.color = float4(lerp3(float3(0.9f, 0.2f, 0.1f), float3(0.f, 0.f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
+  //result.color = float4(lerp4(float3(0.8f, 0.2f, 0.1f), float3(0.7f, 0.f, 0.9f), float3(0.f, 0.5f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
 
   return result;
 }

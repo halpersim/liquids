@@ -190,8 +190,8 @@ void firstRun(uint3 groupID){
 float calculateWeight(uint dir, uint3 momentum, uint constant_factor, uint speed_of_sound_squared){
 	float momemtum_dot = dot(direction_vectors[dir], momentum);
 
-	return ((dir==0) ? 1.f : (1.f / length(direction_vectors[dir]) +  dot(float3(0.f, -1.f, 0.f), normalize(direction_vectors[dir]))))
-		;// *sqrt(1 + momemtum_dot/speed_of_sound_squared + pow(momemtum_dot / speed_of_sound_squared, 2)/2 - constant_factor);
+	return max(0, dir==0 ? 1.f : ((1.f / length(direction_vectors[dir]) + 2.0f * dot(float3(0.f, -1.f, 0.f), normalize(direction_vectors[dir]))))
+		 * sqrt(1 + momemtum_dot/speed_of_sound_squared + pow(momemtum_dot / speed_of_sound_squared, 2)/2 - constant_factor));
 }
 
 //in the second run, the particle redistribution within the lattice calculated in the first run

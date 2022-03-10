@@ -19,6 +19,8 @@
 const float Simulation1::VisiblityPassPointOffset = 0.1f;
 const DXGI_FORMAT Simulation1::TextureFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
 
+const XMVECTOR Simulation1::eye = XMVectorSet(-0.f, 1.75f, -5.5f, 1.f);
+
 constexpr float NaN = std::numeric_limits<float>::quiet_NaN();
 const float Simulation1::DeferredShadingTexturesClearValues[3][4] = {
   {NaN, NaN, NaN, NaN}, //pos
@@ -679,8 +681,7 @@ void Simulation1::LoadAssets(){
     ThrowIfFailed(m_constShaderInput.shading->Map(0, &read_range, reinterpret_cast<void**>(&deferredShadingInput)));
 
     const float radius = 1.f / (LatticePointsPerUnit);
-    XMVECTOR eye = XMVectorSet(-3.f, 1.75f, -4.f, 1.f);
-
+    
     XMMATRIX viewMatrix = XMMatrixLookAtLH(eye, XMVectorSet(0.f, 0.f, 1.f, 1.f), XMVectorSet(0.f, 1.f, 0.f, 0.f));
     XMMATRIX projectionMatrix = XMMatrixPerspectiveFovLH(1.5708f, m_aspectRatio, 0.1f, 100.f);
 
