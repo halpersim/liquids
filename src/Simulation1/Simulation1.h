@@ -68,7 +68,7 @@ private:
   
   //the sum of all particles described by one lattice point must be greater than 
   //this threshhold for the point to be rendered
-  static const UINT Threshhold = 2000;
+  static const UINT Threshhold = 1500;
 
   static const float VisiblityPassPointOffset;
 

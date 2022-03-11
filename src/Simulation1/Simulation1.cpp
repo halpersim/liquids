@@ -1128,12 +1128,12 @@ UINT* Simulation1::generateInitialLatticeBufferData(UINT latticeBufferSize){
  
   //initialize the lattice buffer with a cube at its center
   //coodinates of the cube
-  int x_start = 1 * LatticePointsPerUnit;
-  int x_end = 2 * LatticePointsPerUnit;
-  int y_start = 0 * LatticePointsPerUnit;
-  int y_end = 1 * LatticePointsPerUnit;
-  int z_start = 1 * LatticePointsPerUnit;
-  int z_end = 2 * LatticePointsPerUnit;
+  int x_start = 10 * LatticePointsPerUnit / 10;
+  int x_end = 20 * LatticePointsPerUnit / 10;
+  int y_start = 0 * LatticePointsPerUnit / 10;
+  int y_end = 10 * LatticePointsPerUnit / 10;
+  int z_start = 10 * LatticePointsPerUnit / 10;
+  int z_end = 20 * LatticePointsPerUnit / 10;
 
   for(int z = z_start; z < z_end; z++) {
     for(int y = y_start; y < y_end; y++) {

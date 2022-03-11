@@ -7,55 +7,68 @@ static const uint ADDRESS_UNIT_SIZE = 8 * 4; //sizeof(uint) * 8
 
 static const uint BYTE_PER_LATTICE_FOR_BULK_IO = 40;
 
-//defines the opposite directions the boundary condition
-static const uint inverse_lookup_table[19] = {
-	0,
+//defines the index of the direction, if the sign of one component of the direction vector is flipped
+static const uint3 inverse_lookup_table[19] = {
+	uint3(0, 0, 0),
 
-	13,
-	14,
-	15,
-	16,
-	17,
-	18,
+	//if the sign of the x component of direction 1 (0, 0, 1) is flipped -> it stays direction 1 (0, 0, 1)
+	//if the sign of the z component is filpped it becomes (0, 0, -1) -> direction 13
+	uint3(1, 2, 1),
+	uint3(2, 1, 2),
+	uint3(3, 3, 4),
+	uint3(4, 4, 3),
+	uint3(6, 5, 5),
+	uint3(5, 6, 6),
 
-	10,
-	11,
-	12,
-	7,
-	8,
-	9,
-	
-	1,
-	2,
-	3,
-	4,
-	5,
-	6,
+	uint3(17, 7, 18),
+	uint3(18, 8, 17),
+	uint3(9, 14, 13),
+	uint3(10, 13, 14),
+	uint3(16, 15, 11),
+	uint3(15, 16, 12),
+
+	uint3(13, 10, 9),
+	uint3(14, 9, 10),
+	uint3(12, 11, 15),
+	uint3(11, 12, 16),
+	uint3(7, 17, 8),
+	uint3(8, 18, 7),
 };
 
 static const int3 direction_vectors[19] = {
 	int3(0,  0,  0), //0
 
-	int3(0,  0,  1), //13
-	int3(0,  1,  0), //14
-	int3(0,  1,  1), //15
-	int3(1,  0,  0), //16
-	int3(1,  0,  1), //17
-	int3(1,  1,  0), //18
+	int3(0,  1,  0),  //1
+	int3(0, -1,  0),  //2
+	int3(0,  0,  1),  //3
+	int3(0,  0, -1),  //4
+	int3(1,  0,  0),  //5
+	int3(-1,  0,  0), //6
 
-	int3(0,  1, -1), //7
-	int3(1, -1,  0), //8
-	int3(-1,  0,  1), //9
-	int3(0, -1,  1), //10
-	int3(-1,  1,  0), //11
-	int3(1,  0, -1),  //12
+	int3(1,  0,  1),  //7
+	int3(-1,  0, -1), //8
+	int3(0,  1,  1),  //9
+	int3(0, -1, -1),  //10
+	int3(1,  1,  0),  //11
+	int3(-1, -1,  0), //12
 
-	int3(0,  0, -1), //1
-	int3(0, -1,  0), //2 
-	int3(0, -1, -1), //3 
-	int3(-1,  0,  0), //4
-	int3(-1,  0, -1), //5
-	int3(-1, -1,  0), //6
+	int3(0,  1, -1),  //13
+	int3(0, -1,  1),  //14
+	int3(1, -1,  0),  //15
+	int3(-1,  1,  0), //16
+	int3(-1,  0,  1), //17
+	int3(1,  0, -1),  //18
+};
+
+static const uint random_indices[8][19] = {
+	{1,12,3,2,8,14,15,7,4,9,17,16,5,11,13,6,0,10,18},
+	{11,0,18,16,10,14,1,17,12,4,6,13,15,2,5,7,9,8,3},
+	{0,8,6,4,10,11,12,18,9,14,17,5,7,13,15,16,3,2,1},
+	{1,15,10,0,6,7,18,13,5,8,14,12,2,4,3,17,11,16,9},
+	{18,14,1,13,0,9,5,7,17,16,15,2,3,12,10,11,6,8,4},
+	{14,3,5,18,17,11,9,15,8,12,2,6,16,7,13,0,4,1,10},
+	{1,17,12,4,6,15,18,11,7,8,9,3,2,5,14,0,13,10,16},
+	{9,7,2,0,3,8,15,6,17,1,5,18,12,14,4,13,11,16,10}
 };
 
 struct ConstInput{
@@ -96,13 +109,14 @@ void firstRun(uint3 groupID);
 void secondRun(uint3 groupID);
 
 void appendPoints(uint3 lattice_point, uint sum, uint3 momentum);
-float calculateWeight(uint dir, uint3 momentum, uint constant_factor, uint speed_of_sound_squared);
-
+float calculateWeight(uint dir, float3 momentum, float constant_factor, float speed_of_sound_squared, uint particle_count);
 
 Directions readDirections(uint3 lattice_point);
 void writeDirections(uint3 lattice_point, Directions directions);
 uint readWriteDirection(uint3 lattice_point, uint direction, uint value, bool read, bool indirect, MemoryBuffer40 buf);
 uint getIndexInBuffer(uint3 lattice_point);
+
+uint getNextIndex(uint dir, uint index, uint offset);
 
 void bulkWrite(uint3 lattice_point, MemoryBuffer40 buf);
 MemoryBuffer40 bulkRead(uint3 lattice_point);
@@ -123,75 +137,124 @@ void firstRun(uint3 groupID){
 	Directions directions = readDirections(groupID);
 	uint num_particles = 0;
 	uint sum_after = 0;
-	uint3 momentum = uint3(0, 0, 0);
+	float3 momentum = float3(0, 0, 0);
 	float weight_sum = 0;
 	const uint MAX_VALUE = (1 << constants.BitPerLatticePointDirection) - 1;
 	
 	//caluclate density and momentum of the particles in the lattice
 	for(i = 0; i<DIRECTIONS_CNT; i++) {
 		num_particles += directions.dir[i];
-		momentum += direction_vectors[i] * directions.dir[i];
+		momentum += direction_vectors[i] * int(directions.dir[i]);
 	}
 
-	//physic terms
-	float speed_of_sound_squared = pow(constants.unit_length / constants.timestep, 2) / 3;
-	float time_factor = constants.timestep;
-	float equalibrium_factor = dot(momentum, momentum) / (2 * speed_of_sound_squared);
+	if(num_particles > 0) {
+		//if(dot(momentum, momentum) > 0.01f) {
+		//	momentum = normalize(momentum);
+		//}
 
-	for(i = 0; i<DIRECTIONS_CNT; i++) {
-		weight_sum += calculateWeight(i, momentum, equalibrium_factor, speed_of_sound_squared);
-	}
+		//physic terms
+		float speed_of_sound_squared = pow(constants.unit_length / constants.timestep, 2) / 3;
+	//	float speed_of_sound_squared = 0.01f;
+		float time_factor = constants.timestep;
+		float equalibrium_factor = float(dot(momentum, momentum)) / (2 * speed_of_sound_squared);
 
-	[unroll(DIRECTIONS_CNT)]
-	for(i = 0; i<DIRECTIONS_CNT; i++) {
-		float momemtum_dot = dot(direction_vectors[i], momentum);
-		
-		//directions are weighted differntly to favour movement across the main axis and 
-		//to factor in physical effects like gravity
-		//to ensure that no particles are created in the distribution step, all weights must sum up to 1
-		float weight = calculateWeight(i, momentum, equalibrium_factor, speed_of_sound_squared) / weight_sum;
-
-		float equalibrium = weight * float(num_particles); //  *(1 + momemtum_dot/speed_of_sound_squared + pow(momemtum_dot / speed_of_sound_squared, 2)/2 - equalibrium_factor);
-
-		directions.dir[i] -= uint(round(time_factor * (float(directions.dir[i]) - equalibrium)));
-		
-		//at maximum 2^BitsPerLatticePointDirection - 1 can be stored in memory, so the value must no exceed that value 
-		directions.dir[i] = min(MAX_VALUE, directions.dir[i]);
-		sum_after += directions.dir[i];
-	}
-	
-	//if there are particles lost or created due to rounding errors in the redistribution process,
-	//the values of all directions are somewhat evenly adjusted to ensure that the number of particles stays the same
-	//however, no, down and forward movement is most likely affected, as these are the first directions described by the direction array
-	int particle_diff = num_particles - sum_after;
-	int equal_correction = int(particle_diff < 0 ? floor(particle_diff / float(DIRECTIONS_CNT - 1)) : ceil(particle_diff / float(DIRECTIONS_CNT - 1)));
-
-	[unroll(DIRECTIONS_CNT)]
-	for(i = 0; particle_diff != 0 && i<DIRECTIONS_CNT; i++) {
-		int int_dir = int(directions.dir[i]);
-		int optimal_correction = equal_correction;
-		int cor = 0;
-		
-		//checking for over- and underflows	in directions.dir[i]
-		//as well as ensuring that particle_diff becomes exactly 0
-		if(particle_diff < 0) {
-			cor = max(max(particle_diff, optimal_correction), -int_dir);
-		} else if(particle_diff > 0) {
-			cor = min(min(particle_diff, optimal_correction), MAX_VALUE - int_dir);
+		for(i = 0; i<DIRECTIONS_CNT; i++) {
+			weight_sum += calculateWeight(i, momentum, equalibrium_factor, speed_of_sound_squared, num_particles);
 		}
-				
-		directions.dir[i] += cor;
-		particle_diff -= cor;
+
+
+		[unroll(DIRECTIONS_CNT)]
+		for(i = 0; i<DIRECTIONS_CNT; i++) {
+			//directions are weighted differntly to favour movement across the main axis and 
+			//to factor in physical effects like gravity
+			//to ensure that no particles are created in the distribution step, all weights must sum up to 1
+			float weight = calculateWeight(i, momentum, equalibrium_factor, speed_of_sound_squared, num_particles) / weight_sum;
+
+			float equalibrium = weight * float(num_particles);
+
+			directions.dir[i] -= uint(round(time_factor * (float(directions.dir[i]) - equalibrium)));
+
+			//at maximum 2^BitsPerLatticePointDirection - 1 can be stored in memory, so the value must no exceed that value 
+			directions.dir[i] = min(MAX_VALUE, directions.dir[i]);
+			sum_after += directions.dir[i];
+		}
+
+
+		//if there are particles lost or created due to rounding errors in the redistribution process,
+		//the values of all directions are somewhat evenly adjusted to ensure that the number of particles stays the same
+		//however, no, down and forward movement is most likely affected, as these are the first directions described by the direction array
+		int particle_diff = num_particles - sum_after;
+		//int equal_correction = int(particle_diff < 0 ? floor(particle_diff / float(DIRECTIONS_CNT - 1)) : ceil(particle_diff / float(DIRECTIONS_CNT - 1)));
+		int equal_correction = int(particle_diff < 0 ? floor(particle_diff / float(DIRECTIONS_CNT)) : ceil(particle_diff / float(DIRECTIONS_CNT)));
+
+		uint seed1 = (groupID.x+1) * (groupID.y+1) * (groupID.z+1);
+		uint seed2 = (1 + groupID.x + groupID.y + groupID.z);
+		uint index = (seed1 ^ seed2) & 7;
+		uint offset = seed2 % 19;
+
+		[unroll(DIRECTIONS_CNT)]
+		for(i = 0; particle_diff != 0 && i<DIRECTIONS_CNT; i++) {
+			
+			//uint dir = (seed1 ^ (i * seed2)) % 19;
+			//uint dir = random_indices[0][i];
+			//uint dir = getNextIndex(i, index, offset);
+			
+			uint dir = i;
+			
+			int int_dir = int(directions.dir[dir]);
+			int optimal_correction = equal_correction;
+			int cor = 0;
+
+		//	if(i == 0)  {
+		//		cor = max(-int_dir, min(int(MAX_VALUE) - int_dir, particle_diff / 2)); 
+		//	} else {
+				//checking for over- and underflows	in directions.dir[i]
+				//as well as ensuring that particle_diff becomes exactly 0
+				if(particle_diff < 0) {
+					cor = max(max(particle_diff, optimal_correction), -int_dir);
+				} else if(particle_diff > 0) {
+					cor = min(min(particle_diff, optimal_correction), MAX_VALUE - int_dir);
+				}
+	//		}
+
+			directions.dir[dir] += cor;
+			particle_diff -= cor;
+		}
 	}
 	
 	writeDirections(groupID, directions);
 }
 
-float calculateWeight(uint dir, uint3 momentum, uint constant_factor, uint speed_of_sound_squared){
+uint getNextIndex(uint dir, uint index, uint offset){
+	return random_indices[index][(dir + offset)%19];
+}
+
+float calculateWeight(uint dir, float3 momentum, float constant_factor, float speed_of_sound_squared, uint particle_count){
+	if(dir == 0) {
+		return 1.f;
+	}
+
 	float momemtum_dot = dot(direction_vectors[dir], momentum);
 
-	return max(0, dir==0 ? 1.f : ((1.f / length(direction_vectors[dir]) + 2.0f * dot(float3(0.f, -1.f, 0.f), normalize(direction_vectors[dir]))))
-		 * sqrt(1 + momemtum_dot/speed_of_sound_squared + pow(momemtum_dot / speed_of_sound_squared, 2)/2 - constant_factor));
+	float direction_component = 1.f;
+	
+	if(dir != 0) { 
+		direction_component = max(0.f,
+			1.f / length(direction_vectors[dir])
+			+ 1.f * dot(float3(0.f, -1.f, 0.f), normalize(direction_vectors[dir]))
+
+		) *
+			max(0.01f, min(20, 3000 / float(particle_count) * dot(normalize(direction_vectors[dir]), normalize(momentum))));
+	}
+	
+	//float physics_component = sqrt(max(0, 1 + momemtum_dot/speed_of_sound_squared + pow(momemtum_dot / speed_of_sound_squared, 2)/2 - constant_factor));
+	//float physics_component = sqrt(1 + momemtum_dot/speed_of_sound_squared + pow(momemtum_dot / speed_of_sound_squared, 2)/2 - constant_factor);
+
+	//if(isnan(physics_component)) {
+		return direction_component;
+	//}
+
+	//return pow(direction_component, 1) * pow(physics_component, 1);	  
 }
 
 //in the second run, the particle redistribution within the lattice calculated in the first run
@@ -202,6 +265,7 @@ void secondRun(uint3 groupID){
 	uint sum = 0;
 	uint3 momentum = uint3(0, 0, 0);
 	MemoryBuffer40 dummy;
+	uint3 max = uint3(constants.global_X, constants.global_Y, constants.global_Z);
 
 	[unroll(DIRECTIONS_CNT)]
 	for(uint i = 0; i<DIRECTIONS_CNT; i++) {
@@ -210,20 +274,22 @@ void secondRun(uint3 groupID){
 		//rather than writing its new values into their neighbors' storage
 		int3 other_point = int3(groupID) - direction_vectors[i];
 		uint other_dir = i;
+		bool reflect = false;
 
-
-		//if the lattice is on a boundary, the opposite direction within the same direction is taken
-		//-> particles on the boundary are bounced into the opposite direction
-		if(other_point.x < 0 || uint(other_point.x) >= constants.global_X ||
-			other_point.y < 0 || uint(other_point.y) >= constants.global_Y ||
-			other_point.z < 0 || uint(other_point.z) >= constants.global_Z) {
-
-			other_point = groupID; 
-			other_dir = inverse_lookup_table[i];
+		for(uint k = 0; k<3; k++) {
+			//if the other point is not in the lattice (= this point is on the boundary)
+			//flip the sign of the corresponding component in the direction vector
+			if(other_point[k] < 0 || uint(other_point[k]) >= max[k]) {
+				other_dir = inverse_lookup_table[other_dir][k];
+				reflect = true;
+			}
 		}
-		
+
+		if(reflect) {
+			other_point = groupID;
+		}
+
 		directions.dir[i] = readWriteDirection(uint3(other_point), other_dir, 0, true, false, dummy);
-		//directions.dir[i] = readWriteDirection(uint3(other_point), other_dir, 0, true);
 		sum += directions.dir[i];
 		momentum += direction_vectors[i] * directions.dir[i];
 	}
@@ -316,7 +382,7 @@ void writeDirections(uint3 lattice_point, Directions directions){
 		}
 		*/
 		/*
-		// work around 1
+		// workaround 1
 		// increases compile time significantly
 		// turned out to be even worse than storing the values individually
 
@@ -354,7 +420,7 @@ void writeDirections(uint3 lattice_point, Directions directions){
 		}
 		*/
 
-		// work around 2
+		// workaround 2
 		// still increases compile time 
 		// however is faster than storing the values indiviually by around a third
 

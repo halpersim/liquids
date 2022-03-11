@@ -104,7 +104,7 @@ PSOutput PSMain(GSOutput input) {
 
   float3 pos = input.world_pos + world_space_offset;
   float3 normal = normalize(world_space_offset);
-  float3 color = float3(0.3f, 0.78f, 0.89f);
+  float3 color = float3(0.1f, 0.58f, 0.69f);
 
   //weights according to the paper by Adams et. al.
   float weights[2];
@@ -118,8 +118,8 @@ PSOutput PSMain(GSOutput input) {
   result.color = float4(weight * color, weight);
 
   //for debugging 
-  float t = smoothstep(2000, 2450, input.cnt);
-  result.color = float4(lerp3(float3(0.9f, 0.2f, 0.1f), float3(0.f, 0.f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
+  //float t = smoothstep(2000, 4000, input.cnt);
+  //result.color = float4(lerp3(float3(0.9f, 0.2f, 0.1f), float3(0.f, 0.f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
   //result.color = float4(lerp4(float3(0.8f, 0.2f, 0.1f), float3(0.7f, 0.f, 0.9f), float3(0.f, 0.5f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
 
   return result;
