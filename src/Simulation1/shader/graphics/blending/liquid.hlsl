@@ -8,6 +8,8 @@ struct PointInformation_Struct {
   matrix invers_vw;
   float radius;
   float epsilon;
+  uint particle_threshold;
+  uint color_upper_bound;
 };
 
 static float4 TriangleOffsets[4] = {
@@ -115,12 +117,16 @@ PSOutput PSMain(GSOutput input) {
 
   result.pos = float4(pos, 1.f);
   result.normal = float4(weight * normal, 1.f);
-  result.color = float4(weight * color, weight);
-
-  //for debugging 
-  //float t = smoothstep(2000, 4000, input.cnt);
-  //result.color = float4(lerp3(float3(0.9f, 0.2f, 0.1f), float3(0.f, 0.f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
-  //result.color = float4(lerp4(float3(0.8f, 0.2f, 0.1f), float3(0.7f, 0.f, 0.9f), float3(0.f, 0.5f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
-
+  
+  if(point_info.particle_threshold > point_info.color_upper_bound) {
+    //give the liquid one uniform color      
+    result.color = float4(weight * color, weight);
+  } else {
+    //color the liquid differently based on the number of particles in the given region
+    float t = smoothstep(point_info.particle_threshold, point_info.color_upper_bound, input.cnt);
+    result.color = float4(lerp3(float3(0.9f, 0.2f, 0.1f), float3(0.f, 0.f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
+    //result.color = float4(lerp4(float3(0.8f, 0.2f, 0.1f), float3(0.7f, 0.f, 0.9f), float3(0.f, 0.5f, 1.f), float3(0.2f, 0.9f, 0.3f), t) * weight, weight);
+  }
+  
   return result;
 }

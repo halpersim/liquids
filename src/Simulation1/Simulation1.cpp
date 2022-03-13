@@ -29,6 +29,8 @@ const float Simulation1::DeferredShadingTexturesClearValues[3][4] = {
 };
 
 const float Simulation1::TimeStep = 0.35f;
+const float Simulation1::MomentumExponent = 1.f;
+const float Simulation1::GravityFactor = 1.f;
 
 Simulation1::Simulation1(UINT width, UINT height, std::wstring name) :
   DXSample(width, height, name),
@@ -39,7 +41,7 @@ Simulation1::Simulation1(UINT width, UINT height, std::wstring name) :
   m_rtvDescriptorSize(0),
   m_cbvSrvUavDescriptorSize(0),
   m_computeSyncFenceValue(0),
-  freeze(true)
+  freeze(false)
 {
 }
 
@@ -696,6 +698,8 @@ void Simulation1::LoadAssets(){
     blendingShaderInput->invers_vw = XMMatrixInverse(nullptr, viewMatrix);
     blendingShaderInput->epsilon = VisiblityPassPointOffset;
     blendingShaderInput->radius = radius;
+    blendingShaderInput->particle_threshold = ParticleThreshold;
+    blendingShaderInput->color_upper_bound = UniformColor ? 0 : ColorUpperBound;
 
     deferredShadingInput->eye = XMFLOAT4(eye.m128_f32);
     deferredShadingInput->light = XMFLOAT4(0.f, 2.f, -3.f, 1.f);
@@ -965,11 +969,14 @@ void Simulation1::PopulateCommandList(){
       csIn.global_X = LatticeWith * LatticePointsPerUnit;
       csIn.global_Y = LatticeHeight * LatticePointsPerUnit;
       csIn.global_Z = LatticeDepth * LatticePointsPerUnit;
-      csIn.threshhold = Threshhold;
+      csIn.particle_threshold = ParticleThreshold;
       csIn.unit_lenght = 1.f / LatticePointsPerUnit;
       csIn.run = run;
       csIn.PointsPerLattice = PointsPerLattice;
       csIn.timestep = TimeStep;
+      csIn.gravity_factor = GravityFactor;
+      csIn.momentum_exponent = MomentumExponent;
+      csIn.include_reality_increasing_terms = IncludeRealityIncreasingTerms;
 
       D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvUavHandle = m_computeCbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart();
 

@@ -21,6 +21,19 @@ private:
   //#######################       Constants        ###############################
 
   //-------Simulation Output Influencing Constants-----------
+  //the value every direction of every lattice point within the starting cube is set to
+  static const UINT SimulationStartValue = 1000;
+  
+  //how much gravity be factored in
+  static const float GravityFactor;
+  //how much the momentum of the particles should be factored in
+  static const float MomentumExponent;
+  //include terms that more precisely model realistic fluid flow
+  static const bool IncludeRealityIncreasingTerms = false;
+
+  static const float TimeStep;
+
+  //--------Simulation Technical Constants-------------------
   static const UINT LatticeWith = 3;
   static const UINT LatticeHeight = 1;
   static const UINT LatticeDepth = 3;
@@ -28,19 +41,14 @@ private:
 
   static const UINT LatticePointDirections = 19;
   static const UINT BitPerLatticePointDirection = 16;
+
   //to avoid race conditions in the compute shader,
   //the data for one lattice point has to be 4-byte aligned
   static const UINT BytePerLatticePoint = 40;
 
   static const UINT NUM_LATTICE_POINTS = LatticeWith * LatticeHeight * LatticeDepth * LatticePointsPerUnit * LatticePointsPerUnit * LatticePointsPerUnit;
 
-  //the value every direction of every lattice point within the starting cube is set to
-  static const UINT SimulationStartValue = 1000;
-
-  static const float TimeStep;
-  static const XMVECTOR eye;
-
-  //--------Simulation Technical Constants-------------------
+  
   static const UINT ComputeRuns = 2;
   static const UINT LatticeBufferCount = 2;
 
@@ -67,10 +75,19 @@ private:
   static const UINT PointsPerLattice = 8;
   
   //the sum of all particles described by one lattice point must be greater than 
-  //this threshhold for the point to be rendered
-  static const UINT Threshhold = 1500;
+  //this threshold for the point to be rendered
+  static const UINT ParticleThreshold = 1500;
+  
+  //defines if the liquid should be desplayed as having one uniform color 
+  //otherwise it will be a color gradiend depending on the number of particles at every point
+  static const bool UniformColor = true;
+
+  //defindes the number of particles, which represent the upper bound for the color gradient
+  //if UniformColor is false
+  static const UINT ColorUpperBound = 1900;
 
   static const float VisiblityPassPointOffset;
+  static const XMVECTOR eye;
 
   //--------Rendering Technical Constants--------------
   
@@ -116,11 +133,14 @@ private:
     UINT global_X;
     UINT global_Y;
     UINT global_Z;
-    UINT threshhold;
+    UINT particle_threshold;
     float unit_lenght;
     UINT run;
     UINT PointsPerLattice;
     float timestep;
+    float gravity_factor;
+    float momentum_exponent;
+    UINT include_reality_increasing_terms;
   };
 
   struct MatrixShaderInput{
@@ -139,6 +159,8 @@ private:
     XMMATRIX invers_vw;
     float radius;
     float epsilon;
+    UINT particle_threshold;
+    UINT color_upper_bound;
   };
 
   struct DeferredShadingInput {

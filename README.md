@@ -16,3 +16,5 @@ Simulation 1 uses modified version of the Lattice Boltzmann method for simulatin
 By tweaking different constants it can produce the following results with a frame time of about 150ms (on a Nvidia Geforce 940mx): 
 
 ![simulation1_gif1.gif](https://github.com/halpersim/liquids/blob/master/readme/simulation1_gif1.gif)
+
+![simulation1_gif2.gif](https://github.com/halpersim/liquids/blob/master/readme/simulation1_gif2.gif)

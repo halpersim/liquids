@@ -60,28 +60,20 @@ static const int3 direction_vectors[19] = {
 	int3(1,  0, -1),  //18
 };
 
-static const uint random_indices[8][19] = {
-	{1,12,3,2,8,14,15,7,4,9,17,16,5,11,13,6,0,10,18},
-	{11,0,18,16,10,14,1,17,12,4,6,13,15,2,5,7,9,8,3},
-	{0,8,6,4,10,11,12,18,9,14,17,5,7,13,15,16,3,2,1},
-	{1,15,10,0,6,7,18,13,5,8,14,12,2,4,3,17,11,16,9},
-	{18,14,1,13,0,9,5,7,17,16,15,2,3,12,10,11,6,8,4},
-	{14,3,5,18,17,11,9,15,8,12,2,6,16,7,13,0,4,1,10},
-	{1,17,12,4,6,15,18,11,7,8,9,3,2,5,14,0,13,10,16},
-	{9,7,2,0,3,8,15,6,17,1,5,18,12,14,4,13,11,16,10}
-};
-
 struct ConstInput{
 	uint BitPerLatticePointDirection;
 	uint BytePerLatticePoint;
 	uint global_X;
 	uint global_Y;
 	uint global_Z;
-	uint threshhold;
+	uint particle_threshold;
 	float unit_length;
 	uint run;
 	uint PointsPerLattice;
 	float timestep;
+	float gravity_factor;
+	float momentum_exponent;
+	uint include_reality_increasing_terms;
 };
 
 struct IndirectCommand{
@@ -141,83 +133,73 @@ void firstRun(uint3 groupID){
 	float weight_sum = 0;
 	const uint MAX_VALUE = (1 << constants.BitPerLatticePointDirection) - 1;
 	
-	//caluclate density and momentum of the particles in the lattice
+	//calculate the number of particles and the overall momentum of the particles in the lattice
 	for(i = 0; i<DIRECTIONS_CNT; i++) {
 		num_particles += directions.dir[i];
 		momentum += direction_vectors[i] * int(directions.dir[i]);
 	}
 
 	if(num_particles > 0) {
-		//if(dot(momentum, momentum) > 0.01f) {
-		//	momentum = normalize(momentum);
-		//}
-
 		//physic terms
-		float speed_of_sound_squared = pow(constants.unit_length / constants.timestep, 2) / 3;
-	//	float speed_of_sound_squared = 0.01f;
-		float time_factor = constants.timestep;
-		float equalibrium_factor = float(dot(momentum, momentum)) / (2 * speed_of_sound_squared);
+		float speed_of_sound_squared = 0.f;
+		float equalibrium_factor = 0.f;
+
+		//only calculate those physic therms, if it is desired
+		if(constants.include_reality_increasing_terms != 0) {
+			speed_of_sound_squared = pow(constants.unit_length / constants.timestep, 2) / 3;
+			equalibrium_factor = float(dot(momentum, momentum)) / (2 * speed_of_sound_squared);
+		}
 
 		for(i = 0; i<DIRECTIONS_CNT; i++) {
 			weight_sum += calculateWeight(i, momentum, equalibrium_factor, speed_of_sound_squared, num_particles);
 		}
 
 
+		//change the particles directions according to certain weights
+		//this is analoguos of how real particles within the space described by this lattice point
+		//would collide and change direction according to differend physics equations
 		[unroll(DIRECTIONS_CNT)]
 		for(i = 0; i<DIRECTIONS_CNT; i++) {
-			//directions are weighted differntly to favour movement across the main axis and 
-			//to factor in physical effects like gravity
+			//directions are weighted differntly to produce desired results
+			//the difference between different simulations lies within those weights
 			//to ensure that no particles are created in the distribution step, all weights must sum up to 1
 			float weight = calculateWeight(i, momentum, equalibrium_factor, speed_of_sound_squared, num_particles) / weight_sum;
 
 			float equalibrium = weight * float(num_particles);
 
-			directions.dir[i] -= uint(round(time_factor * (float(directions.dir[i]) - equalibrium)));
+			directions.dir[i] -= uint(round(constants.timestep * (float(directions.dir[i]) - equalibrium)));
 
 			//at maximum 2^BitsPerLatticePointDirection - 1 can be stored in memory, so the value must no exceed that value 
 			directions.dir[i] = min(MAX_VALUE, directions.dir[i]);
 			sum_after += directions.dir[i];
 		}
 
-
 		//if there are particles lost or created due to rounding errors in the redistribution process,
 		//the values of all directions are somewhat evenly adjusted to ensure that the number of particles stays the same
-		//however, no, down and forward movement is most likely affected, as these are the first directions described by the direction array
-		int particle_diff = num_particles - sum_after;
-		//int equal_correction = int(particle_diff < 0 ? floor(particle_diff / float(DIRECTIONS_CNT - 1)) : ceil(particle_diff / float(DIRECTIONS_CNT - 1)));
-		int equal_correction = int(particle_diff < 0 ? floor(particle_diff / float(DIRECTIONS_CNT)) : ceil(particle_diff / float(DIRECTIONS_CNT)));
+		//however, this distribution is heavily dependent on the order in which the direction vectors are defined,
+		//because directions which are defined first are more likely to be affected by this process
+		//therefore the directions vectors have to be defined as uniform as possible 
 
-		uint seed1 = (groupID.x+1) * (groupID.y+1) * (groupID.z+1);
-		uint seed2 = (1 + groupID.x + groupID.y + groupID.z);
-		uint index = (seed1 ^ seed2) & 7;
-		uint offset = seed2 % 19;
+		//however this method is good enough, if it is not important to produce a flat rectangular prism in the end
+		//(also, as of now, it is the only compileable method, because the compiler crashes if the index variable is included in any calculation)
+		int particle_diff = num_particles - sum_after;
+		int equal_correction = int(particle_diff < 0 ? floor(particle_diff / float(DIRECTIONS_CNT)) : ceil(particle_diff / float(DIRECTIONS_CNT)));
 
 		[unroll(DIRECTIONS_CNT)]
 		for(i = 0; particle_diff != 0 && i<DIRECTIONS_CNT; i++) {
-			
-			//uint dir = (seed1 ^ (i * seed2)) % 19;
-			//uint dir = random_indices[0][i];
-			//uint dir = getNextIndex(i, index, offset);
-			
-			uint dir = i;
-			
-			int int_dir = int(directions.dir[dir]);
+			int int_dir = int(directions.dir[i]);
 			int optimal_correction = equal_correction;
 			int cor = 0;
 
-		//	if(i == 0)  {
-		//		cor = max(-int_dir, min(int(MAX_VALUE) - int_dir, particle_diff / 2)); 
-		//	} else {
-				//checking for over- and underflows	in directions.dir[i]
-				//as well as ensuring that particle_diff becomes exactly 0
-				if(particle_diff < 0) {
-					cor = max(max(particle_diff, optimal_correction), -int_dir);
-				} else if(particle_diff > 0) {
-					cor = min(min(particle_diff, optimal_correction), MAX_VALUE - int_dir);
-				}
-	//		}
+			//checking for over- and underflows	in directions.dir[i]
+			//as well as ensuring that particle_diff becomes exactly 0
+			if(particle_diff < 0) {
+				cor = max(max(particle_diff, optimal_correction), -int_dir);
+			} else if(particle_diff > 0) {
+				cor = min(min(particle_diff, optimal_correction), MAX_VALUE - int_dir);
+			}
 
-			directions.dir[dir] += cor;
+			directions.dir[i] += cor;
 			particle_diff -= cor;
 		}
 	}
@@ -225,36 +207,32 @@ void firstRun(uint3 groupID){
 	writeDirections(groupID, directions);
 }
 
-uint getNextIndex(uint dir, uint index, uint offset){
-	return random_indices[index][(dir + offset)%19];
-}
-
 float calculateWeight(uint dir, float3 momentum, float constant_factor, float speed_of_sound_squared, uint particle_count){
 	if(dir == 0) {
 		return 1.f;
 	}
 
-	float momemtum_dot = dot(direction_vectors[dir], momentum);
+	float direction_component = max(0.f,
+		1.f / length(direction_vectors[dir])
+		+ constants.gravity_factor * dot(float3(0.f, -1.f, 0.f), normalize(direction_vectors[dir])));
 
-	float direction_component = 1.f;
+	float momentum_component = 1.f;
 	
-	if(dir != 0) { 
-		direction_component = max(0.f,
-			1.f / length(direction_vectors[dir])
-			+ 1.f * dot(float3(0.f, -1.f, 0.f), normalize(direction_vectors[dir]))
-
-		) *
-			max(0.01f, min(20, 3000 / float(particle_count) * dot(normalize(direction_vectors[dir]), normalize(momentum))));
+	if(constants.momentum_exponent > 0.01f) {
+		momentum_component = pow(max(0.01f, min(20, constants.particle_threshold * 2.f / float(particle_count) * dot(normalize(direction_vectors[dir]), normalize(momentum)))), constants.momentum_exponent);
 	}
-	
-	//float physics_component = sqrt(max(0, 1 + momemtum_dot/speed_of_sound_squared + pow(momemtum_dot / speed_of_sound_squared, 2)/2 - constant_factor));
-	//float physics_component = sqrt(1 + momemtum_dot/speed_of_sound_squared + pow(momemtum_dot / speed_of_sound_squared, 2)/2 - constant_factor);
 
-	//if(isnan(physics_component)) {
-		return direction_component;
-	//}
+	if(constants.include_reality_increasing_terms == 0) {
+		return direction_component * momentum_component;
+	}
 
-	//return pow(direction_component, 1) * pow(physics_component, 1);	  
+	float momemtum_dot = dot(direction_vectors[dir], momentum);
+	float physics_component_squared = 1 + momemtum_dot/speed_of_sound_squared + pow(momemtum_dot / speed_of_sound_squared, 2)/2 - constant_factor;
+
+	if(physics_component_squared < 0.f) {
+		return direction_component * momentum_component;
+	}
+	return direction_component * momentum_component * sqrt(physics_component_squared);
 }
 
 //in the second run, the particle redistribution within the lattice calculated in the first run
@@ -269,7 +247,7 @@ void secondRun(uint3 groupID){
 
 	[unroll(DIRECTIONS_CNT)]
 	for(uint i = 0; i<DIRECTIONS_CNT; i++) {
-		//to minimize race conditions in the lattice buffer, 
+		//to avoid race conditions in the lattice buffer, 
 		//each lattice node looks up the values of the next step at its neighbors and stores it
 		//rather than writing its new values into their neighbors' storage
 		int3 other_point = int3(groupID) - direction_vectors[i];
@@ -279,7 +257,10 @@ void secondRun(uint3 groupID){
 		for(uint k = 0; k<3; k++) {
 			//if the other point is not in the lattice (= this point is on the boundary)
 			//flip the sign of the corresponding component in the direction vector
+			//and sample from the current point
 			if(other_point[k] < 0 || uint(other_point[k]) >= max[k]) {
+				//the inverse lookup table contains the index of the direction that you get, 
+				//if you flip the sign of the current direction vector in the dimension k
 				other_dir = inverse_lookup_table[other_dir][k];
 				reflect = true;
 			}
@@ -295,8 +276,8 @@ void secondRun(uint3 groupID){
 	}
 
 	//to avoid artifacts, a lattice point is rendered only,
-	//if the number of its particles described by it surpases a certain threshhold
-	if(sum > constants.threshhold) {
+	//if the number of its particles described by it surpases a certain threshold
+	if(sum > constants.particle_threshold) {
 		appendPoints(groupID, sum, momentum);
 	} 
 
@@ -307,8 +288,7 @@ void appendPoints(uint3 lattice_point, uint sum, uint3 momentum){
 	float3 _point = float3(
 		lattice_point.x * constants.unit_length,
 		lattice_point.y * constants.unit_length,
-		lattice_point.z * constants.unit_length)
-		;// +constants.unit_length * (smoothstep(2000, 3000, sum) - 0.5f) * normalize(float3(momentum));
+		lattice_point.z * constants.unit_length);
 
 	switch(constants.PointsPerLattice) {
 		case 8:
