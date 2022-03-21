@@ -151,11 +151,20 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\Simulation1\Simulation1.cpp" />
+    <ClCompile Include="src\Simulation2\buffer.cpp" />
+    <ClCompile Include="src\Simulation2\computation.cpp" />
+    <ClCompile Include="src\Simulation2\rendering.cpp" />
+    <ClCompile Include="src\Simulation2\Simulation2.cpp" />
     <ClCompile Include="src\Utility\DXSample.cpp" />
     <ClCompile Include="src\Utility\Win32Applicaiton.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Simulation1\Simulation1.h" />
+    <ClInclude Include="src\Simulation2\buffer.h" />
+    <ClInclude Include="src\Simulation2\computation.h" />
+    <ClInclude Include="src\Simulation2\frame_constants.h" />
+    <ClInclude Include="src\Simulation2\rendering.h" />
+    <ClInclude Include="src\Simulation2\Simulation2.h" />
     <ClInclude Include="src\Utility\d3dx12.h" />
     <ClInclude Include="src\Utility\DXSample.h" />
     <ClInclude Include="src\Utility\DXSampleHelper.h" />
@@ -194,6 +203,18 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
     </FxCompile>
     <FxCompile Include="src\Simulation1\shader\graphics\visibility\ground.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="src\Simulation2\shader\compute\compute_shader.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="src\Simulation2\shader\graphics\triangles.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VSMain</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>

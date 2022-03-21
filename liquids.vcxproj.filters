@@ -11,7 +11,19 @@
       <Filter>Utility</Filter>
     </ClCompile>
     <ClCompile Include="src\Simulation1\Simulation1.cpp">
-      <Filter>Sample</Filter>
+      <Filter>Sample\Simulation1</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation2\computation.cpp">
+      <Filter>Sample\Simulation2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation2\rendering.cpp">
+      <Filter>Sample\Simulation2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation2\Simulation2.cpp">
+      <Filter>Sample\Simulation2</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Simulation2\buffer.cpp">
+      <Filter>Sample\Simulation2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -31,7 +43,22 @@
       <Filter>Utility</Filter>
     </ClInclude>
     <ClInclude Include="src\Simulation1\Simulation1.h">
-      <Filter>Sample</Filter>
+      <Filter>Sample\Simulation1</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation2\computation.h">
+      <Filter>Sample\Simulation2</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation2\rendering.h">
+      <Filter>Sample\Simulation2</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation2\Simulation2.h">
+      <Filter>Sample\Simulation2</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation2\buffer.h">
+      <Filter>Sample\Simulation2</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Simulation2\frame_constants.h">
+      <Filter>Sample\Simulation2</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -65,6 +92,18 @@
     <Filter Include="Utility">
       <UniqueIdentifier>{fa0d4bf9-86ec-4cc7-b94c-dbee0288a6b6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Sample\Simulation2">
+      <UniqueIdentifier>{d5c8be9a-4cd8-4d63-8917-c768778b74e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation2\shader">
+      <UniqueIdentifier>{c982d457-2ddb-48be-880d-eb97ba1969c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation2\shader\compute">
+      <UniqueIdentifier>{c4daab39-ce9a-43e1-a57f-9dc8d67c0040}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample\Simulation2\shader\graphics">
+      <UniqueIdentifier>{86755c05-23db-494f-892c-f21f74a2fd53}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\Simulation1\shader\graphics\shading\deferred_shading.hlsl">
@@ -84,6 +123,12 @@
     </FxCompile>
     <FxCompile Include="src\Simulation1\shader\compute\compute_shader.hlsl">
       <Filter>Sample\Simulation1\shader\compute</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Simulation2\shader\compute\compute_shader.hlsl">
+      <Filter>Sample\Simulation2\shader\compute</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Simulation2\shader\graphics\triangles.hlsl">
+      <Filter>Sample\Simulation2\shader\graphics</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

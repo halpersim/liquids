@@ -1,14 +1,3 @@
-//*********************************************************
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-//*********************************************************
-
 #include "src/Utility/stdafx.h"
 #include "src/Simulation1/Simulation1.h"
 
@@ -447,8 +436,8 @@ void Simulation1::LoadAssets(){
     {
       //------------Compute Shader pipeline State----------------------
       ComPtr<ID3DBlob> computeShader;
-      ThrowIfFailed(D3DReadFileToBlob(GetAssetFullPath(L"./compute_shader.cso").c_str(), &computeShader));
-      //ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"../../src/Simulation1/shader/compute/compute_shader.hlsl").c_str(), nullptr, nullptr, "CSMain", "cs_5_1", compileFlags, 0, &computeShader, nullptr));
+      //ThrowIfFailed(D3DReadFileToBlob(GetAssetFullPath(L"./compute_shader.cso").c_str(), &computeShader));
+      ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"../../src/Simulation1/shader/compute/compute_shader.hlsl").c_str(), nullptr, nullptr, "CSMain", "cs_5_1", compileFlags, 0, &computeShader, nullptr));
 
       D3D12_COMPUTE_PIPELINE_STATE_DESC computePsoDesc = {};
       computePsoDesc.pRootSignature = m_computeSignature.Get();
