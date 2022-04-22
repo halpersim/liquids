@@ -1,10 +1,10 @@
 #include "src/Utility/stdafx.h"
-#include "Simulation2.h"
+#include "Simulation2.h" 
 
 #include <chrono>
 #include <functional>
 
-#define InterlockedGetValue(object) InterlockedCompareExchange(object, 0, 0)
+//#define DEBUG_SYNCRO
 
 Simulation2::Simulation2(UINT width, UINT height, std::wstring name) :
   DXSample(width, height, name),
@@ -108,9 +108,17 @@ void Simulation2::LoadPipeline(){
 
 
 void Simulation2::LoadAssets(){
+  { //fences
+    device->CreateFence(render_fence_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&render_fence));
+    device->CreateFence(compute_fence_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&compute_fence));
+
+    render_fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    compute_fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+  }
+
   {//vertex buffer 
-    UINT num_elements = 3;
-    UINT stride = sizeof(float) * 2;
+    UINT num_elements = PARTICLE_COUNT;
+    UINT stride = sizeof(float) * 3;
 
     ComPtr<ID3D12Resource> vertex_buffer_com;
 
@@ -124,22 +132,20 @@ void Simulation2::LoadAssets(){
       IID_PPV_ARGS(&vertex_buffer_com)
     ));
 
+    std::vector<ComPtr<ID3D12Resource>> upload_heaps;  
+
     std::shared_ptr<buffer> vertex_buffer = std::make_shared<buffer>(vertex_buffer_com, num_elements, stride, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
     vertex_buffer->get()->SetName(L"vertex_buffer");
 
+   
     render_obj.load_assets(device, swap_chain, vertex_buffer);
-    compute_obj.load_assets(device, vertex_buffer);
+    ID3D12CommandList* compute_list[] = {compute_obj.load_assets(device, vertex_buffer, upload_heaps) };
+
+    compute_queue->ExecuteCommandLists(_countof(compute_list), compute_list);
+
+    WaitForGpu();
   }
-
-  { //fences
-    device->CreateFence(render_fence_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&render_fence));
-    device->CreateFence(compute_fence_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&compute_fence));
-
-    render_fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    compute_fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-  }
-
 }
 
 
@@ -163,9 +169,11 @@ void Simulation2::async_compute_loop(){
       UINT64 render_value = render_fence_value.load(std::memory_order_seq_cst);
 
       if(render_fence->GetCompletedValue() < render_value) {
-        compute_queue->Wait(render_fence.Get(), render_value);
-
+        
+#ifdef DEBUG_SYNCRO
         OutputDebugStringA((std::string("compute run #") + std::to_string(compute_fence_value + 1) + " waiting for render run #" + std::to_string(render_value) + "\n").c_str());
+#endif
+        compute_queue->Wait(render_fence.Get(), render_value);
       }
 
       compute_queue->ExecuteCommandLists(_countof(command_lists), command_lists);
@@ -189,9 +197,10 @@ void Simulation2::OnRender(){
     UINT64 compute_fence_val = compute_fence_value.load(std::memory_order_seq_cst);
 
     if(compute_fence->GetCompletedValue() < compute_fence_val) {
+#ifdef DEBUG_SYNCRO
+      OutputDebugStringA((std::string("render run #") + std::to_string(render_fence_value + 1) + " waiting for compute run #" + std::to_string(compute_fence_val)+ "\n").c_str());
+#endif
       graphics_queue->Wait(compute_fence.Get(), compute_fence_val);
-    
-      OutputDebugStringA((std::string("render run #") + std::to_string(render_fence_value) + " waiting for compute run #" + std::to_string(compute_fence_value) + "\n").c_str());
     }
 
     graphics_queue->ExecuteCommandLists(_countof(command_lists), command_lists);
@@ -202,8 +211,7 @@ void Simulation2::OnRender(){
   }
   
   ThrowIfFailed(swap_chain->Present(1, 0));
-
-  
+    
   if(render_fence->GetCompletedValue() < frame_fence_values[swap_chain->GetCurrentBackBufferIndex()]) {
     render_fence->SetEventOnCompletion(frame_fence_values[swap_chain->GetCurrentBackBufferIndex()], render_fence_event);
     WaitForSingleObject(render_fence_event, INFINITE);
@@ -235,8 +243,13 @@ void Simulation2::OnDestroy(){
 }
 
 void Simulation2::WaitForGpu(){
+  render_fence_value.fetch_add(1, std::memory_order_relaxed);
   graphics_queue->Signal(render_fence.Get(), render_fence_value);
   render_fence->SetEventOnCompletion(render_fence_value, render_fence_event);
-  render_fence_value.fetch_add(1, std::memory_order_relaxed);
   WaitForSingleObject(render_fence_event, INFINITE);
+
+  compute_fence_value.fetch_add(1, std::memory_order_relaxed);
+  compute_queue->Signal(compute_fence.Get(), compute_fence_value);
+  compute_fence->SetEventOnCompletion(compute_fence_value, compute_fence_event);
+  WaitForSingleObject(compute_fence_event, INFINITE);
 }

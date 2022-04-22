@@ -63,5 +63,4 @@ private:
 
   void spawn_compute_thread();
   void async_compute_loop();
-
 };

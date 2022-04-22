@@ -12,6 +12,11 @@ using namespace frame_constants;
 class rendering {
 private:
 
+	struct ShaderInput {
+		XMMATRIX mvp;
+	};
+
+
 	ComPtr<ID3D12CommandAllocator> command_allocator[FRAME_COUNT];
 	ComPtr<ID3D12GraphicsCommandList> command_list;
 	ComPtr<ID3D12RootSignature> root_signature;
@@ -23,11 +28,21 @@ private:
 	CD3DX12_VIEWPORT viewport;
 	CD3DX12_RECT scissor_rect;
 
+	ComPtr<ID3D12DescriptorHeap> dsv_heap;
+	ComPtr<ID3D12Resource> depth_buffer;
+
 	ComPtr<ID3D12DescriptorHeap> rtv_heap;
 	ComPtr<ID3D12Resource> render_target[FRAME_COUNT];
 
 	UINT rtv_descriptor_size;
 
+	UINT width;
+	UINT height;
+	float aspect_ratio;
+
+	ShaderInput shader_input;
+
+	const static XMVECTOR EYE;
 public:
 
 	rendering(UINT with, UINT height);

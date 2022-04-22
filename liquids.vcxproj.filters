@@ -60,6 +60,9 @@
     <ClInclude Include="src\Simulation2\frame_constants.h">
       <Filter>Sample\Simulation2</Filter>
     </ClInclude>
+    <ClInclude Include="src\Simulation2\my_utils.h">
+      <Filter>Sample\Simulation2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source">
@@ -129,6 +132,12 @@
     </FxCompile>
     <FxCompile Include="src\Simulation2\shader\graphics\triangles.hlsl">
       <Filter>Sample\Simulation2\shader\graphics</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Simulation2\shader\compute\apply_forces.hlsl">
+      <Filter>Sample\Simulation2\shader\compute</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Simulation2\shader\compute\density_evaluation.hlsl">
+      <Filter>Sample\Simulation2\shader\compute</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>
