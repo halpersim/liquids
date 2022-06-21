@@ -4,18 +4,27 @@ struct SimulationConstants{
 	float smoothing_radius;
 	float density_kernel_constant;
 	float pressure_kernel_constant;
+
 	float pressure_constant;
 	float viscosity_constant;
 	float timestep;
+
 	float reference_density;
 	uint particle_count;
 	float3 gravity;
-	float3 boundary;
+
+	//float3 boundary; float3 doesn't work apparently
+	float boundary_x;
+	float boundary_y;
+	float boundary_z;
+
+	float particle_radius;
+	uint3 grid_size;
 };
 
-StructuredBuffer<float3> pos_buffer : register(t0);
-RWStructuredBuffer<float> density_buffer : register(u0);
-ConstantBuffer<SimulationConstants> constants : register(b0);
+StructuredBuffer<float3> pos_buffer : register(t2);
+RWStructuredBuffer<float> density_buffer : register(u2);
+ConstantBuffer<SimulationConstants> constants : register(b2);
 
 [numthreads(THREAD_COUNT, 1, 1)]
 void CSMain(uint3 dispatch_thread_id : SV_DispatchThreadID){

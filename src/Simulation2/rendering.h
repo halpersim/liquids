@@ -42,7 +42,7 @@ private:
 
 	ShaderInput shader_input;
 
-	const static XMVECTOR EYE;
+	
 public:
 
 	rendering(UINT with, UINT height);

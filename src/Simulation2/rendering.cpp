@@ -1,9 +1,6 @@
 #include "rendering.h"
 #include "src/Utility/DXSampleHelper.h"
 
-
-const XMVECTOR rendering::EYE = XMVectorSet(0.f, 0.f, -20.f, 1.f);
-
 rendering::rendering(UINT width, UINT height) :
 	width(width),
 	height(height),
@@ -140,8 +137,12 @@ void rendering::load_assets(ComPtr<ID3D12Device> device, ComPtr<IDXGISwapChain3>
 	}
 
 	{ //initialise Matrices
-		XMMATRIX world = XMMatrixIdentity();
-		XMMATRIX view = XMMatrixLookAtLH(EYE, XMVectorSet(2.5f, 2.5f, 2.5f, 1.f), XMVectorSet(0.f, 1.f, 0.f, 0.f));
+		XMVECTOR eye = XMVectorSet(frame_constants::EYE[0], frame_constants::EYE[1], frame_constants::EYE[2], 1.f);
+		XMVECTOR point_of_interest = XMVectorSet(frame_constants::POI[0], frame_constants::POI[1], frame_constants::POI[2], 1.f);
+
+		//XMMATRIX world = XMMatrixTranslation(-frame_constants::SIMULATION_BOX_BOUNDARY[0] * 0.5, -frame_constants::SIMULATION_BOX_BOUNDARY[1] * 0.5, -frame_constants::SIMULATION_BOX_BOUNDARY[2] * 0.5);
+		XMMATRIX world = XMMatrixTranslation(-frame_constants::SIMULATION_BOX_BOUNDARY[0] * 0.5f, -frame_constants::SIMULATION_BOX_BOUNDARY[1] * 0.5f, -frame_constants::SIMULATION_BOX_BOUNDARY[2] * 0.5f);
+		XMMATRIX view = XMMatrixLookAtLH(eye, point_of_interest, XMVectorSet(0.f, 1.f, 0.f, 0.f));
 		XMMATRIX projection = XMMatrixPerspectiveFovLH(1.5708f, aspect_ratio, 0.1f, 100.f);
 
 		shader_input.mvp = XMMatrixMultiply(world, XMMatrixMultiply(view, projection));
