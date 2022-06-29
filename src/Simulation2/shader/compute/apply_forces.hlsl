@@ -22,10 +22,10 @@ struct SimulationConstants{
 	uint3 grid_size;
 };
 
-StructuredBuffer<float> density_buffer : register(t3);
-RWStructuredBuffer<float3> velocity_buffer : register(u3);
-RWStructuredBuffer<float3> pos_buffer : register(u4);
-ConstantBuffer<SimulationConstants> constants : register(b3);
+StructuredBuffer<float> density_buffer : register(t4);
+RWStructuredBuffer<float3> velocity_buffer : register(u4);
+RWStructuredBuffer<float3> pos_buffer : register(u5);
+ConstantBuffer<SimulationConstants> constants : register(b4);
 
 float pressure_at(uint idx);
 float3x3 get_rotation_matrix(float3 axis);

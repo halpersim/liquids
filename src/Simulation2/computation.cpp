@@ -48,22 +48,27 @@ ID3D12CommandList* computation::load_assets(ComPtr<ID3D12Device> device, std::sh
 		grid_range[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 
 		CD3DX12_DESCRIPTOR_RANGE1 sort_range[1];
-		//sort_range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 		sort_range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 
+		CD3DX12_DESCRIPTOR_RANGE1 table_range[3];
+		table_range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+		table_range[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+		table_range[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+
 		CD3DX12_DESCRIPTOR_RANGE1 density_range[3];
-		density_range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
-		density_range[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
-		density_range[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+		density_range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 3, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+		density_range[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+		density_range[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 3, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 
 		CD3DX12_DESCRIPTOR_RANGE1 force_range[3];
-		force_range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 3, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
-		force_range[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
-		force_range[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 2, 3, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+		force_range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 4, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+		force_range[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+		force_range[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 2, 4, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 		
-		CD3DX12_ROOT_PARAMETER1 signature_parameter[5];
+		CD3DX12_ROOT_PARAMETER1 signature_parameter[6];
 		signature_parameter[SHADER_ORDER::CREATE_GRID].InitAsDescriptorTable(_countof(grid_range), grid_range);
 		signature_parameter[SHADER_ORDER::SORT].InitAsDescriptorTable(_countof(sort_range), sort_range);
+		signature_parameter[SHADER_ORDER::CREATE_TABLE].InitAsDescriptorTable(_countof(table_range), table_range);
 		signature_parameter[SHADER_ORDER::DENSITY_EVALUATION].InitAsDescriptorTable(_countof(density_range), density_range);
 		signature_parameter[SHADER_ORDER::APPLY_FORCES].InitAsDescriptorTable(_countof(force_range), force_range);
 		signature_parameter[SORTING_CONTANTS_SLOT].InitAsConstants(sizeof(SortParameters) >> 2, 1, 0);
@@ -87,6 +92,7 @@ ID3D12CommandList* computation::load_assets(ComPtr<ID3D12Device> device, std::sh
 	{ //pipeline state
 		load_shader(device.Get(), root_signature.Get(), &pso.create_grid, L"../../src/Simulation2/shader/compute/create_grid.hlsl");
 		load_shader(device.Get(), root_signature.Get(), &pso.sort, L"../../src/Simulation2/shader/compute/sort.hlsl");
+		load_shader(device.Get(), root_signature.Get(), &pso.create_table, L"../../src/Simulation2/shader/compute/create_table.hlsl");
 		load_shader(device.Get(), root_signature.Get(), &pso.density, L"../../src/Simulation2/shader/compute/density_evaluation.hlsl");
 		load_shader(device.Get(), root_signature.Get(), &pso.force, L"../../src/Simulation2/shader/compute/apply_forces.hlsl");
 	}
@@ -140,7 +146,7 @@ ID3D12CommandList* computation::load_assets(ComPtr<ID3D12Device> device, std::sh
 		&heap_properties,
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(frame_constants::PARTICLE_COUNT * sizeof(UINT) * 2, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		nullptr,
 		IID_PPV_ARGS(&grid_buffer)
 	));
@@ -148,11 +154,40 @@ ID3D12CommandList* computation::load_assets(ComPtr<ID3D12Device> device, std::sh
 	ThrowIfFailed(device->CreateCommittedResource(
 		&heap_properties,
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(frame_constants::PARTICLE_COUNT * sizeof(UINT), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+		&CD3DX12_RESOURCE_DESC::Buffer(LOOKUP_TABLE_SIZE, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		nullptr,
 		IID_PPV_ARGS(&lookup_buffer)
 	));
+
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(LOOKUP_TABLE_SIZE),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&lookup_reset_buffer)
+	));
+
+#define SET_NAME(x) x->SetName(L#x);
+	SET_NAME(density_buffer);
+	SET_NAME(velocity_buffer);
+	SET_NAME(constant_buffer);
+	SET_NAME(grid_buffer);
+	SET_NAME(lookup_buffer);
+	SET_NAME(lookup_reset_buffer);
+#undef SET_NAME
+
+
+
+	UINT* reset_buffer = nullptr;
+	CD3DX12_RANGE readRange(0, 0);
+	ThrowIfFailed(lookup_reset_buffer->Map(0, &readRange, reinterpret_cast<void**>(&reset_buffer)));
+
+	memset(reset_buffer, 0xFFFF, LOOKUP_TABLE_SIZE);
+
+	lookup_reset_buffer->Unmap(0, nullptr);
+	//command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(lookup_reset_buffer.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_SOURCE));
 
 	float velocity_data[frame_constants::PARTICLE_COUNT * 3];
 	ZeroMemory(velocity_data, sizeof(velocity_data));
@@ -191,7 +226,7 @@ ID3D12CommandList* computation::load_assets(ComPtr<ID3D12Device> device, std::sh
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE heap_handle(descriptor_heap->GetCPUDescriptorHandleForHeapStart());
 
-	grid_pass_descriptor_offset = 0.f;
+	descriptor_offset.create_grid = 0.f;
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constants_desc = {};
 	constants_desc.BufferLocation = constant_buffer->GetGPUVirtualAddress();
@@ -223,12 +258,40 @@ ID3D12CommandList* computation::load_assets(ComPtr<ID3D12Device> device, std::sh
 	device->CreateUnorderedAccessView(grid_buffer.Get(), nullptr, &grid_uav_desc, heap_handle);
 	heap_handle.Offset(1, srv_descriptor_size);
 
-	sort_pass_descriptor_offset = DESCRIPTOR_PER_PASS[0];
+	descriptor_offset.sort = DESCRIPTOR_PER_PASS[0];
 
 	device->CreateUnorderedAccessView(grid_buffer.Get(), nullptr, &grid_uav_desc, heap_handle);
 	heap_handle.Offset(1, srv_descriptor_size);
+
+	descriptor_offset.create_table = descriptor_offset.sort + DESCRIPTOR_PER_PASS[1];
 	
-	density_pass_descriptor_offset = sort_pass_descriptor_offset + DESCRIPTOR_PER_PASS[1];
+	device->CreateConstantBufferView(&constants_desc, heap_handle);
+	heap_handle.Offset(1, srv_descriptor_size);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC grid_srv_desc = {};
+	grid_srv_desc.Format = DXGI_FORMAT_UNKNOWN;
+	grid_srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+	grid_srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	grid_srv_desc.Buffer.FirstElement = 0;
+	grid_srv_desc.Buffer.NumElements = frame_constants::PARTICLE_COUNT;
+	grid_srv_desc.Buffer.StructureByteStride = sizeof(UINT) * 2;
+	grid_srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+
+	device->CreateShaderResourceView(grid_buffer.Get(), &grid_srv_desc, heap_handle);
+	heap_handle.Offset(1, srv_descriptor_size);
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC table_uav_desc = {};
+	table_uav_desc.Format = DXGI_FORMAT_UNKNOWN;
+	table_uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	table_uav_desc.Buffer.FirstElement = 0;
+	table_uav_desc.Buffer.NumElements = frame_constants::GRID_SIZE_FLAT;
+	table_uav_desc.Buffer.StructureByteStride = sizeof(UINT);
+	table_uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+	device->CreateUnorderedAccessView(lookup_buffer.Get(), nullptr, &table_uav_desc, heap_handle);
+	heap_handle.Offset(1, srv_descriptor_size);
+
+	descriptor_offset.density = descriptor_offset.create_table + DESCRIPTOR_PER_PASS[2];
 
 	device->CreateConstantBufferView(&constants_desc, heap_handle);
 	heap_handle.Offset(1, srv_descriptor_size);
@@ -247,7 +310,7 @@ ID3D12CommandList* computation::load_assets(ComPtr<ID3D12Device> device, std::sh
 	device->CreateUnorderedAccessView(density_buffer.Get(), nullptr, &density_uav_desc, heap_handle);
 	heap_handle.Offset(1, srv_descriptor_size);
 
-	forces_pass_descriptor_offset = density_pass_descriptor_offset + DESCRIPTOR_PER_PASS[2];
+	descriptor_offset.force = descriptor_offset.density + DESCRIPTOR_PER_PASS[2];
 
 	device->CreateConstantBufferView(&constants_desc, heap_handle);
 	heap_handle.Offset(1, srv_descriptor_size);
@@ -308,16 +371,18 @@ ID3D12CommandList* computation::populate_command_list(float time){
 
 #ifdef MAP_BUFFERS
 	float* density_ptr;
-	void* ptr1, * ptr2, * ptr3;
+	void* ptr1, * ptr2, * ptr3, * ptr4;
 	density_buffer->Map(0, nullptr, reinterpret_cast<void**>(&density_ptr));
 	velocity_buffer->Map(0, nullptr, &ptr1);
 	vertex_buffer->get()->Map(0, nullptr, &ptr2);
 	grid_buffer->Map(0, nullptr, &ptr3);
+	lookup_buffer->Map(0, nullptr, &ptr4);
 	
 	density_buffer->Unmap(0, &D3D12_RANGE());
 	velocity_buffer->Unmap(0, &D3D12_RANGE());
 	vertex_buffer->get()->Unmap(0, &D3D12_RANGE());
 	grid_buffer->Unmap(0, &D3D12_RANGE());
+	lookup_buffer->Unmap(0, &D3D12_RANGE());
 #endif // MAP_BUFFERS
 	
 
@@ -327,24 +392,25 @@ ID3D12CommandList* computation::populate_command_list(float time){
 
 	CD3DX12_RESOURCE_BARRIER grid_barriers[] = {
 		CD3DX12_RESOURCE_BARRIER::Transition(vertex_buffer->get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
-		//CD3DX12_RESOURCE_BARRIER::Transition(grid_buffer.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		CD3DX12_RESOURCE_BARRIER::Transition(grid_buffer.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 	};
 
 	command_list->ResourceBarrier(_countof(grid_barriers), grid_barriers);
-	CD3DX12_GPU_DESCRIPTOR_HANDLE grid_pass_handle(descriptor_heap->GetGPUDescriptorHandleForHeapStart(), grid_pass_descriptor_offset, srv_descriptor_size);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE grid_pass_handle(descriptor_heap->GetGPUDescriptorHandleForHeapStart(), descriptor_offset.create_grid, srv_descriptor_size);
 	command_list->SetComputeRootDescriptorTable(SHADER_ORDER::CREATE_GRID, grid_pass_handle);
 	command_list->Dispatch(frame_constants::PARTICLE_COUNT / frame_constants::COMPUTE_SHADE_GROUP_SIZE, 1, 1);
 	
 	command_list->SetPipelineState(pso.sort.Get());
-	CD3DX12_GPU_DESCRIPTOR_HANDLE sort_pass_handle(descriptor_heap->GetGPUDescriptorHandleForHeapStart(), sort_pass_descriptor_offset, srv_descriptor_size);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE sort_pass_handle(descriptor_heap->GetGPUDescriptorHandleForHeapStart(), descriptor_offset.sort, srv_descriptor_size);
 	command_list->SetComputeRootDescriptorTable(SHADER_ORDER::SORT, sort_pass_handle);
 	
 	SortParameters params;
 	params.max_idx = frame_constants::PARTICLE_COUNT;
 
-	int max_step = static_cast<int>(std::ceil(std::log2(frame_constants::PARTICLE_COUNT)));
+	int max_step = static_cast<int>(std::ceil(std::log2(frame_constants::PARTICLE_COUNT / 2)));
 	int threads_needed = frame_constants::PARTICLE_COUNT / 2 + frame_constants::PARTICLE_COUNT % 2;
 	
+	//max_step++;
 	for(int step = 0; step <= max_step; step++){
 		params.global_stepsize = step;
 		int cur_step = step + 1;
@@ -362,13 +428,27 @@ ID3D12CommandList* computation::populate_command_list(float time){
 		} while((1 << cur_step) >= frame_constants::COMPUTE_SHADE_GROUP_SIZE);
 	}
 
+	command_list->SetPipelineState(pso.create_table.Get());
+	CD3DX12_RESOURCE_BARRIER create_table_barriers[] = {
+		CD3DX12_RESOURCE_BARRIER::Transition(grid_buffer.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE),
+		CD3DX12_RESOURCE_BARRIER::Transition(lookup_buffer.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST),
+	};
+
+	command_list->ResourceBarrier(_countof(create_table_barriers), create_table_barriers);
+	command_list->CopyBufferRegion(lookup_buffer.Get(), 0, lookup_reset_buffer.Get(), 0, LOOKUP_TABLE_SIZE);
+	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(lookup_buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE table_pass_handle(descriptor_heap->GetGPUDescriptorHandleForHeapStart(), descriptor_offset.create_table, srv_descriptor_size);
+	command_list->SetComputeRootDescriptorTable(SHADER_ORDER::CREATE_TABLE, table_pass_handle);
+	command_list->Dispatch(frame_constants::PARTICLE_COUNT / frame_constants::COMPUTE_SHADE_GROUP_SIZE, 1, 1);
+
 	command_list->SetPipelineState(pso.density.Get());
 	CD3DX12_RESOURCE_BARRIER density_barriers[] = {
 		CD3DX12_RESOURCE_BARRIER::Transition(density_buffer.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS),
 	};
 	command_list->ResourceBarrier(_countof(density_barriers), density_barriers);
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE density_pass_handle(descriptor_heap->GetGPUDescriptorHandleForHeapStart(), density_pass_descriptor_offset, srv_descriptor_size);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE density_pass_handle(descriptor_heap->GetGPUDescriptorHandleForHeapStart(), descriptor_offset.density, srv_descriptor_size);
 	command_list->SetComputeRootDescriptorTable(SHADER_ORDER::DENSITY_EVALUATION, density_pass_handle);
 	command_list->Dispatch(frame_constants::PARTICLE_COUNT / frame_constants::COMPUTE_SHADE_GROUP_SIZE, 1, 1);
 
@@ -379,8 +459,7 @@ ID3D12CommandList* computation::populate_command_list(float time){
 	};
 	command_list->ResourceBarrier(_countof(force_barriers), force_barriers);
 	
-	CD3DX12_GPU_DESCRIPTOR_HANDLE force_pass_handle(descriptor_heap->GetGPUDescriptorHandleForHeapStart(), forces_pass_descriptor_offset, srv_descriptor_size);
-
+	CD3DX12_GPU_DESCRIPTOR_HANDLE force_pass_handle(descriptor_heap->GetGPUDescriptorHandleForHeapStart(), descriptor_offset.force, srv_descriptor_size);
 
 	command_list->SetComputeRootDescriptorTable(SHADER_ORDER::APPLY_FORCES, force_pass_handle);
 

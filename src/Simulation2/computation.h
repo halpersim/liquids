@@ -45,17 +45,18 @@ private:
 	enum SHADER_ORDER : UINT {
 		CREATE_GRID = 0,
 		SORT,
+		CREATE_TABLE,
 		DENSITY_EVALUATION,
 		APPLY_FORCES,
 	};
 
 	static constexpr UINT SORTING_CONTANTS_SLOT = APPLY_FORCES + 1;
 
-	static constexpr std::array<int, 4> DESCRIPTOR_PER_PASS = {3, 1, 3, 4};
+	static constexpr std::array<int, 5> DESCRIPTOR_PER_PASS = {3, 1, 3, 3, 4};
 
 	static constexpr int SHADER_INPUT_SIZE = (sizeof(SimulationConstants) & (~0xFF)) + 0x100;		//constant buffer requires a size divisible by 256 (= 0x100)
 
-	static const int CONST_INPUT_REGISTER = 0;
+	static constexpr int LOOKUP_TABLE_SIZE = frame_constants::GRID_SIZE_FLAT * sizeof(UINT);
 
 	ComPtr<ID3D12CommandAllocator> command_allocator;
 	ComPtr<ID3D12GraphicsCommandList> command_list;
@@ -64,6 +65,7 @@ private:
 	struct {
 		ComPtr<ID3D12PipelineState> create_grid;
 		ComPtr<ID3D12PipelineState> sort;
+		ComPtr<ID3D12PipelineState> create_table;
 		ComPtr<ID3D12PipelineState> density;
 		ComPtr<ID3D12PipelineState> force;
 	} pso;
@@ -77,14 +79,17 @@ private:
 	ComPtr<ID3D12Resource> constant_buffer;
 	ComPtr<ID3D12Resource> grid_buffer;
 	ComPtr<ID3D12Resource> lookup_buffer;
+	ComPtr<ID3D12Resource> lookup_reset_buffer;
 	
 	UINT srv_descriptor_size;
-
-	UINT grid_pass_descriptor_offset;
-	UINT sort_pass_descriptor_offset;
-	UINT density_pass_descriptor_offset;
-	UINT forces_pass_descriptor_offset;
 	
+	struct {
+		UINT create_grid;
+		UINT sort;
+		UINT create_table;
+		UINT density;
+		UINT force;
+	} descriptor_offset;
 
 	SimulationConstants constants;
 

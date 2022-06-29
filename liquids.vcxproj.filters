@@ -145,5 +145,8 @@
     <FxCompile Include="src\Simulation2\shader\compute\sort.hlsl">
       <Filter>Sample\Simulation2\shader\compute</Filter>
     </FxCompile>
+    <FxCompile Include="src\Simulation2\shader\compute\create_table.hlsl">
+      <Filter>Sample\Simulation2\shader\compute</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

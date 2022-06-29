@@ -47,17 +47,20 @@ void CSMain(uint3 dispatch_thread_id : SV_DispatchThreadID){
 
 void compare_swap(uint idx, uint thread_id, uint cur_stepsize){
 	if(idx < constants.max_idx) {
+
+		// if the size of the array to sort is not a power of 2
+		// the indices have to be adjusted as follows
 		uint my_block = idx >> (cur_stepsize + 1);
-		uint next_block_max = ((my_block + 2) << (cur_stepsize + 1)) - 1;
+		uint next_block_max = ((my_block + 1) << (cur_stepsize + 1)) - 1;
 
 		if(next_block_max >= constants.max_idx) {
 			idx += (next_block_max - constants.max_idx) + 1;
 		}
-
+		
 		uint other_idx = idx + (1 << cur_stepsize);
 
 		if(other_idx < constants.max_idx) {
-			bool ascending = (thread_id & (1 << constants.global_stepsize)) != 0;
+			bool ascending = (thread_id & (1 << constants.global_stepsize)) == 0;
 
 			if(grid_buffer[idx].cell_id != grid_buffer[other_idx].cell_id) {
 
@@ -72,7 +75,7 @@ void compare_swap(uint idx, uint thread_id, uint cur_stepsize){
 }
 
 uint get_idx(uint thread_id, uint stepsize){
-	return ((thread_id & ~((1 << stepsize) -1)) << 1) + (thread_id & ((1 << stepsize) - 1));
+	return ((thread_id & ~((1 << stepsize) - 1)) << 1) + (thread_id & ((1 << stepsize) - 1));
 	
 	// the function outputs the following pattern
 
@@ -86,5 +89,10 @@ uint get_idx(uint thread_id, uint stepsize){
 	//		5			 10		9		9		5
 	//		6			 12	 12  10		6
 	//		7			 14  13  11		7
+
+
+	// this is the order in which the elements are compared
+	// e.g. at stepsize 2 thread 5 compares 
+	//	elements at idx 9 and 9 + (1 << 2) = 13
 }
 

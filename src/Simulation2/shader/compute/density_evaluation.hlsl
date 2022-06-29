@@ -22,9 +22,9 @@ struct SimulationConstants{
 	uint3 grid_size;
 };
 
-StructuredBuffer<float3> pos_buffer : register(t2);
-RWStructuredBuffer<float> density_buffer : register(u2);
-ConstantBuffer<SimulationConstants> constants : register(b2);
+StructuredBuffer<float3> pos_buffer : register(t3);
+RWStructuredBuffer<float> density_buffer : register(u3);
+ConstantBuffer<SimulationConstants> constants : register(b3);
 
 [numthreads(THREAD_COUNT, 1, 1)]
 void CSMain(uint3 dispatch_thread_id : SV_DispatchThreadID){
